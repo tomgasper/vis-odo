@@ -12,7 +12,7 @@
 
 using namespace cv;
 
-void poseEstimation(Mat& img_1, Mat& img_2, Mat& R, Mat& t)
+void poseEstimation( Mat& img_1, Mat& img_2, Mat& R, Mat& t)
 {
 	// Set up ORB detector
 	std::vector<KeyPoint> kpts_1, kpts_2;
@@ -26,13 +26,11 @@ void poseEstimation(Mat& img_1, Mat& img_2, Mat& R, Mat& t)
 	// kpts temp arr
 	std::vector<cv::Point2f> temp_kpts_1,temp_kpts_2;
 
-	std::cout << img_1.type() << std::endl;
-
 	//img_1.convertTo(img_1, CV_32FC1);
 	//img_2.convertTo(img_2, CV_32FC1);
 
-	cv::goodFeaturesToTrack(img_1, temp_kpts_1, 300, 0.01, 5,cv::Mat());
-	cv::goodFeaturesToTrack(img_2, temp_kpts_2, 300, 0.01, 5, cv::Mat());
+	cv::goodFeaturesToTrack(img_1, temp_kpts_1, 3000, 0.01, 3,cv::Mat());
+	cv::goodFeaturesToTrack(img_2, temp_kpts_2, 3000, 0.01, 3, cv::Mat());
 
 	//detector->detect(img_1,kpts_1);
 	//detector->detect(img_2,kpts_2);
@@ -56,22 +54,33 @@ void poseEstimation(Mat& img_1, Mat& img_2, Mat& R, Mat& t)
 	std::vector<Mat> descs_arr = {desc_1,desc_2};
 	std::vector<DMatch> good_matches;
 
-	matcher->knnMatch(desc_1,desc_2,all_matches,2);
+	matcher->knnMatch(desc_1,desc_2,all_matches,1);
 
+	
+
+	
 	// Filter matches by distance
 	for (auto const& i : all_matches)
 	{
 		for (auto const& j : i)
 		{
-			if (j.distance <= 10)
-				{				
+			 if (j.distance <= 20){
+								
 				good_matches.push_back(j);
-				}
 			}
+				
+		}
 	}
 
-	Mat matches_img;
-	drawMatches(img_1, kpts_1, img_2, kpts_2, good_matches, matches_img);
+	std::cout << "ALL MATCHES SIZE: " << all_matches.size() << std::endl;
+	std::cout << "GOOD MATCHES SIZE: " << good_matches.size() << std::endl;
+
+
+	std::cout << "INSIDE: " << all_matches[0].size() << std::endl;
+	
+
+	Mat matches_img = img_2;
+	// drawMatches(img_1, kpts_1, img_1, kpts_2, good_matches, matches_img);
 
 	// Camera intrinsics
 	double w = img_1.size().width;
@@ -81,6 +90,7 @@ void poseEstimation(Mat& img_1, Mat& img_2, Mat& R, Mat& t)
 	Point2d principal_point (w/2.,h/2.);
 
 	Mat K = (Mat_<double>(3,3) << f, 0, w/2.0, 0, f, h/2.0, 0, 0, 1);
+	Mat Kinv = K.inv();
 
 	// Calculate the Essential Matrix
 	Mat E;
@@ -90,12 +100,14 @@ void poseEstimation(Mat& img_1, Mat& img_2, Mat& R, Mat& t)
 	{
 		int idx_1 = good_matches[i].queryIdx;
 		int idx_2 = good_matches[i].trainIdx;
+	
 
 		match_pts_1.push_back(kpts_1[idx_1].pt);
 		match_pts_2.push_back(kpts_2[idx_2].pt);
+		cv::line(img_1, kpts_1[idx_1].pt, kpts_2[idx_2].pt, cv::Scalar(0,255,0), 2, 4, 0);
 	}
 
-	E = findEssentialMat(match_pts_1, match_pts_2, f, principal_point);
+	E = findEssentialMat(match_pts_1, match_pts_2, Kinv, cv::RANSAC, 0.99, 3.0, 100);
 
 	std::cout << "ESSENTIAL MATRIX IS: \n" << E << std::endl;
 
@@ -108,7 +120,7 @@ void poseEstimation(Mat& img_1, Mat& img_2, Mat& R, Mat& t)
 	// Recover rotation and translation from Essential Matrix
 	recoverPose(E, match_pts_1, match_pts_2, R, t, f, principal_point);	
 
-	imshow("matches", matches_img);
+	imshow("matches", img_1);
 	//waitKey(0);
 
 }

@@ -54,8 +54,6 @@ void doFrame(pangolin::Renderable& scene,const CameraParams<L>& camera,  std::qu
 		// Not enough frames for feature tracking, 2 are needed
 		if (vid_frames.size() < 2) return;
 
-		Eigen::Matrix3d Kinv;
-		
 		// Process frames from the video stream
 		cv::Mat img1 = vid_frames.front();
 		cv::Mat img2 = vid_frames.back();
@@ -72,24 +70,17 @@ void doFrame(pangolin::Renderable& scene,const CameraParams<L>& camera,  std::qu
 		// Feed new frame to the pose estimation
 		poseEstimation(img1,img2, R, t);	
 
-		std::cout << "camera mat: " << camera.getMat() << std::endl;
-
-		// cv::Mat K = (cv::Mat_<double>(3,3) << f, 0, w/2.0, 0, f, h/2.0, 0, 0, 1);
-		// cv::Mat CV_Kinv = K.inv();
-		cv::cv2eigen(camera.getInvMat(),Kinv);
-
 		Eigen::Matrix4d T_mat;
 		T_mat << R.at<double>(0,0),R.at<double>(0,1),R.at<double>(0,2), t.at<double>(0,0),
 			 R.at<double>(1,0),R.at<double>(1,1),R.at<double>(1,2), t.at<double>(1,0),
 			 R.at<double>(2,0),R.at<double>(2,1),R.at<double>(2,2), t.at<double>(2,0),
 			 0,0,0,1;
-
 		
 		std::cout << T_mat << std::endl;
 		std::cout << R << std::endl;
 		std::cout << t << std::endl;
 
-		visualize(scene, Kinv, T_mat);
+		visualize(scene, camera.getInvMatEig(), T_mat);
 
 		}
 

@@ -13,12 +13,13 @@ public:
 	CameraParams(T w, T h, T f)
 	{
 		if (w <= 0 || h <= 0 || f <= 0) throw std::invalid_argument("Invalid camera parameters");
+
 		_w = w;
 		_h = h;
 		_f = f;
-
 		_principal_pt = std::make_pair(w/2,h/2.);
-
+		
+		// Insert the data into matrix form
 		initMatrix();
 		initInvMatrix(_K);
 	}
@@ -57,7 +58,7 @@ private:
 	void initInvMatrix(const cv::Mat_<T>& K)
 	{
 		_Kinv = K.inv();
-		cv2eigen(_Kinv, _Eig_Kinv);
+		cv::cv2eigen(_Kinv, _Eig_Kinv);
 	}
 
 	T _w;
