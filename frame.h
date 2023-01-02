@@ -3,9 +3,10 @@
 #include <opencv2/opencv.hpp>
 
 #include "./camera_params.hpp"
+#include "./state.h"
 
 template<typename T>
 void visualize(pangolin::Renderable&, const Eigen::Matrix<T,3,3>& , const Eigen::Matrix<T,4,4>& );
 
 template <typename L>
-void doFrame(pangolin::Renderable&, const CameraParams<L>&, std::queue<cv::Mat>& );
+void doFrame(pangolin::Renderable&, const CameraParams<L>&, std::queue<cv::Mat>&, struct myState&);

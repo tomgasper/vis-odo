@@ -12,6 +12,7 @@
 
 #include "./frame.h"
 #include "./camera_params.hpp"
+#include "./state.h"
 
 
 int main( int /*argc*/, char** /*argv*/ )
@@ -42,7 +43,7 @@ int main( int /*argc*/, char** /*argv*/ )
 	pangolin::Timer time;
 
 	// Open up video stream
-	cv::VideoCapture vid1("./data/vid1_trim.mp4");
+	cv::VideoCapture vid1("./data/vid6.mp4");
 
 	// Safety check
 	if (!vid1.isOpened())
@@ -60,29 +61,48 @@ int main( int /*argc*/, char** /*argv*/ )
 	// Store 2 most recent frames for feature matching
 	std::queue<cv::Mat> vid_frames;
 
+	// temp state handling
+	Eigen::Matrix4d T_state;
+      	T_state = Eigen::Matrix<double, 4, 4>::Identity();
+	myState state;
+	state.prevT = T_state;
+
+	state.w_t = (cv::Mat_<double>(3,1) << 0, 0, 0);
+	state.w_R = (cv::Mat_<double>(3,3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);
+
+	bool isVidBuff = true;
+
 	// Main program loop
 	while( !pangolin::ShouldQuit() )
 	{
 		// Clear screen and activate view to render into
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 		double t = time.Elapsed_ms();
-		std::cout << t/1000. << std::endl;
 
+
+		if (isVidBuff)
+		{
 		// Capture frame
 		cv::Mat video_frame;
 		vid1 >> video_frame;
+		vid1 >> video_frame;
+		vid1 >> video_frame;
+		vid1 >> video_frame;
 
-		if (video_frame.empty()) break;
+
+
+		if (video_frame.empty()){ isVidBuff = false; continue; }
 		vid_frames.push(video_frame);
 
+		}
+
 		// All the action happens inside
-		doFrame(scene, camera, vid_frames);
+		doFrame(scene, camera, vid_frames, state);
 
 		// Swap frames and Process Events
 		pangolin::FinishFrame();
 
-		if (vid_frames.size() > 1) vid_frames.pop();
+		if (isVidBuff && vid_frames.size() > 1) vid_frames.pop();
 	}
 
 	cv::waitKey(0);

@@ -26,9 +26,6 @@ void poseEstimation( Mat& img_1, Mat& img_2, Mat& R, Mat& t)
 	// kpts temp arr
 	std::vector<cv::Point2f> temp_kpts_1,temp_kpts_2;
 
-	//img_1.convertTo(img_1, CV_32FC1);
-	//img_2.convertTo(img_2, CV_32FC1);
-
 	cv::goodFeaturesToTrack(img_1, temp_kpts_1, 3000, 0.01, 3,cv::Mat());
 	cv::goodFeaturesToTrack(img_2, temp_kpts_2, 3000, 0.01, 3, cv::Mat());
 
@@ -54,33 +51,18 @@ void poseEstimation( Mat& img_1, Mat& img_2, Mat& R, Mat& t)
 	std::vector<Mat> descs_arr = {desc_1,desc_2};
 	std::vector<DMatch> good_matches;
 
-	matcher->knnMatch(desc_1,desc_2,all_matches,1);
-
-	
+	matcher->knnMatch(desc_1,desc_2,all_matches,2);
 
 	
 	// Filter matches by distance
-	for (auto const& i : all_matches)
+	for (auto const& match : all_matches)
 	{
-		for (auto const& j : i)
-		{
-			 if (j.distance <= 20){
-								
-				good_matches.push_back(j);
-			}
-				
+		if (match[0].distance < 0.5*match[1].distance){								
+		 good_matches.push_back(match[0]);
 		}
 	}
 
-	std::cout << "ALL MATCHES SIZE: " << all_matches.size() << std::endl;
-	std::cout << "GOOD MATCHES SIZE: " << good_matches.size() << std::endl;
-
-
-	std::cout << "INSIDE: " << all_matches[0].size() << std::endl;
-	
-
 	Mat matches_img = img_2;
-	// drawMatches(img_1, kpts_1, img_1, kpts_2, good_matches, matches_img);
 
 	// Camera intrinsics
 	double w = img_1.size().width;
@@ -89,7 +71,9 @@ void poseEstimation( Mat& img_1, Mat& img_2, Mat& R, Mat& t)
 
 	Point2d principal_point (w/2.,h/2.);
 
-	Mat K = (Mat_<double>(3,3) << f, 0, w/2.0, 0, f, h/2.0, 0, 0, 1);
+	Mat K = (Mat_<double>(3,3) <<   f, 0, w/2.0,
+		       			0, f, h/2.0,
+					0, 0, 1);
 	Mat Kinv = K.inv();
 
 	// Calculate the Essential Matrix
@@ -104,24 +88,57 @@ void poseEstimation( Mat& img_1, Mat& img_2, Mat& R, Mat& t)
 
 		match_pts_1.push_back(kpts_1[idx_1].pt);
 		match_pts_2.push_back(kpts_2[idx_2].pt);
+		cv::circle(img_1, kpts_1[idx_1].pt, 1, cv::Scalar(0,0.0,255.0),2);
+		cv::circle(img_1, kpts_2[idx_2].pt, 1, cv::Scalar(0,0.0,255.0),2);
+
+
 		cv::line(img_1, kpts_1[idx_1].pt, kpts_2[idx_2].pt, cv::Scalar(0,255,0), 2, 4, 0);
 	}
+	
 
-	E = findEssentialMat(match_pts_1, match_pts_2, Kinv, cv::RANSAC, 0.99, 3.0, 100);
+	// std::cout << "norm points" << match_pts_1 << std::endl;
 
-	std::cout << "ESSENTIAL MATRIX IS: \n" << E << std::endl;
+	E = findEssentialMat(match_pts_1, match_pts_2, K, cv::RANSAC, 0.9999, 3.0, 200);	
 
 	// Decompose Essential matrix
 	Mat s,v,d;
 	SVD::compute(E, s, v, d);
 
-	std::cout << "SINGULAR VALUES: \n" << s << std::endl;
-
 	// Recover rotation and translation from Essential Matrix
-	recoverPose(E, match_pts_1, match_pts_2, R, t, f, principal_point);	
+	recoverPose(E, match_pts_1, match_pts_2, K, R,t);
+
+
+	// Check accuracy
+	Mat t_left_cross = ( Mat_<double>(3,3) << 0, -t.at<double>(2,0), t.at<double>(1,0),
+				t.at<double>(2,0), 0 , -t.at<double>(0,0),
+				-t.at<double>(1,0), t.at<double>(0,0), 0);
+
+	// std::cout << "essential matrix: " << E << std::endl;
+	// std::cout << "t^R=" <<'\n' << t_left_cross * R << std::endl;
+
+	// check epipolar constraints
+	for ( auto const& m : good_matches )
+	{
+
+
+
+		Mat pt1 = (Mat_<double>(3,1) << kpts_1[m.queryIdx].pt.x, kpts_1[m.queryIdx].pt.y, 1.);
+		Mat pt2 = (Mat_<double>(3,1) << kpts_2[m.trainIdx].pt.x, kpts_2[m.trainIdx].pt.y, 1.);
+
+		pt1 = Kinv * pt1;
+		pt2 = Kinv * pt2;
+
+		pt1.at<double>(0,2) = 1.;
+		pt2.at<double>(0,2) = 1.;
+
+		Mat dist = pt2.t() * t_left_cross * R * pt1;
+		//std::cout << "epipolar constraint = " << dist << std::endl;
+	}
+
+	
 
 	imshow("matches", img_1);
-	//waitKey(0);
+	// waitKey(0);
 
 }
 

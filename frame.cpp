@@ -21,12 +21,14 @@
 #include "./frame.h"
 #include "./camera_params.hpp"
 
+#include "./state.h"
+
 template<typename T>
 void visualize(pangolin::Renderable& scene, const Eigen::Matrix<T, 3, 3>& Kinv, const Eigen::Matrix<T,4,4>& T_mat)
 {
 
 		// Add new camera to the scene
-		auto camera = std::make_shared<pangolin::Camera<double>>(Kinv, 960. ,540.  , 1.f, 1);
+		auto camera = std::make_shared<pangolin::Camera<double>>(Kinv, 960. ,540.  , 0.2f, 1);
 		camera->T_pc = pangolin::OpenGlMatrix(T_mat);
 		scene.Add(camera);
 
@@ -49,14 +51,14 @@ void visualize(pangolin::Renderable& scene, const Eigen::Matrix<T, 3, 3>& Kinv, 
 }
 
 template<typename L>
-void doFrame(pangolin::Renderable& scene,const CameraParams<L>& camera,  std::queue<cv::Mat>& vid_frames)
+void doFrame(pangolin::Renderable& scene,const CameraParams<L>& camera,  std::queue<cv::Mat>& vid_frames, struct myState& state)
 {
 		// Not enough frames for feature tracking, 2 are needed
 		if (vid_frames.size() < 2) return;
 
 		// Process frames from the video stream
-		cv::Mat img1 = vid_frames.front();
-		cv::Mat img2 = vid_frames.back();
+		cv::Mat img1 = vid_frames.back();
+		cv::Mat img2 = vid_frames.front();
 
 		cv::resize(img1,img1, cv::Size(), 0.5,0.5);
 		cv::resize(img2, img2, cv::Size(), 0.5,0.5);
@@ -66,23 +68,68 @@ void doFrame(pangolin::Renderable& scene,const CameraParams<L>& camera,  std::qu
 
 		// Init matrices for the poseEstimation output
 		cv::Mat R, t;
+
+		
 		
 		// Feed new frame to the pose estimation
-		poseEstimation(img1,img2, R, t);	
+		poseEstimation(img1,img2, R, t);
 
+		// std::cout << "R: " << R << std::endl;
+		std::cout << "t: " << t << std::endl;
+
+		// state.w_t = state.w_t + 0.1 * (state.w_R * t);
+		// state.w_R = R.() * state.w_R;
+
+		// R = state.w_R;
+		// t = state.w_t;
+		//
+		//
+	
+
+		/*
 		Eigen::Matrix4d T_mat;
 		T_mat << R.at<double>(0,0),R.at<double>(0,1),R.at<double>(0,2), t.at<double>(0,0),
 			 R.at<double>(1,0),R.at<double>(1,1),R.at<double>(1,2), t.at<double>(1,0),
 			 R.at<double>(2,0),R.at<double>(2,1),R.at<double>(2,2), t.at<double>(2,0),
 			 0,0,0,1;
-		
-		std::cout << T_mat << std::endl;
-		std::cout << R << std::endl;
-		std::cout << t << std::endl;
+		*/
 
-		visualize(scene, camera.getInvMatEig(), T_mat);
+
+		Eigen::Matrix4d T_mat;
+		T_mat << R.at<double>(0,0),R.at<double>(0,1),R.at<double>(0,2), 0.1*t.at<double>(0,0),
+			 R.at<double>(1,0),R.at<double>(1,1),R.at<double>(1,2), 0.1*t.at<double>(1,0),
+			 R.at<double>(2,0),R.at<double>(2,1),R.at<double>(2,2), 0.1*t.at<double>(2,0),
+			 0,0,0,1;
+
+		Eigen::Matrix4d flip_Y;
+		flip_Y << 1, 0, 0, 0,
+		          0, -1, 0, 0,
+		          0, 0, -1, 0,
+		          0, 0, 0, 1;
+
+
+		
+		// cv::Mat t_norm = t / cv::norm(t);
+		// cv::Mat t_to_cam = -(R.t() * t_norm);
+		//
+
+		/*
+		T_mat << 1, 0, 0, t.at<double>(0,0),
+		      	0, 1, 0 , t.at<double>(1,0),
+			0, 0, 1, t.at<double>(2,0),
+			0, 0, 0, 1;
+
+		*/
+
+		// new transform
+		state.prevT = (state.prevT * T_mat);
+
+		Eigen::Matrix4d flipMat = state.prevT.transpose() * flip_Y;
+		Eigen::Matrix4d fin = flipMat.transpose();
+
+		visualize(scene, camera.getInvMatEig(), fin);
 
 		}
 
-template void doFrame(pangolin::Renderable& scene, const CameraParams<double>& camera,  std::queue<cv::Mat>& vid_frames);
+template void doFrame(pangolin::Renderable& scene, const CameraParams<double>& camera,  std::queue<cv::Mat>& vid_frames, struct myState& state);
 
