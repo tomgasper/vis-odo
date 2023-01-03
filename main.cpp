@@ -43,7 +43,7 @@ int main( int /*argc*/, char** /*argv*/ )
 	pangolin::Timer time;
 
 	// Open up video stream
-	cv::VideoCapture vid1("./data/vid6.mp4");
+	cv::VideoCapture vid1("./data/vid/vid6.mp4");
 
 	// Safety check
 	if (!vid1.isOpened())
@@ -61,16 +61,8 @@ int main( int /*argc*/, char** /*argv*/ )
 	// Store 2 most recent frames for feature matching
 	std::queue<cv::Mat> vid_frames;
 
-	// temp state handling
-	Eigen::Matrix4d T_state;
-      	T_state = Eigen::Matrix<double, 4, 4>::Identity();
-	myState state;
-	state.prevT = T_state;
-
-	state.w_t = (cv::Mat_<double>(3,1) << 0, 0, 0);
-	state.w_R = (cv::Mat_<double>(3,3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);
-
 	bool isVidBuff = true;
+	int _SKIP = 1;
 
 	// Main program loop
 	while( !pangolin::ShouldQuit() )
@@ -82,32 +74,44 @@ int main( int /*argc*/, char** /*argv*/ )
 
 		if (isVidBuff)
 		{
-		// Capture frame
-		cv::Mat video_frame;
-		vid1 >> video_frame;
-		vid1 >> video_frame;
-		vid1 >> video_frame;
-		vid1 >> video_frame;
+			cv::Mat video_frame;
+			bool success = true;
+			int extra_skip = 0;
 
+			// Capture frame
+			vid1 >> video_frame;
 
+			// If _SKIP > 0 skips extra frames 
+			while( !video_frame.empty() && extra_skip < _SKIP)
+			{
+				vid1 >> video_frame;
+				extra_skip++;
+			}
 
-		if (video_frame.empty()){ isVidBuff = false; continue; }
-		vid_frames.push(video_frame);
+			// If video stream is finished stop reading it but allow for OpenGl loop
+			if ( video_frame.empty() )
+			{
+				isVidBuff = false;
+				continue;
+			}
+
+			// Push frame to the vector for use in "doFrame" function
+			vid_frames.push(video_frame);
 
 		}
 
 		// All the action happens inside
-		doFrame(scene, camera, vid_frames, state);
+		doFrame(scene, camera, vid_frames);
 
 		// Swap frames and Process Events
 		pangolin::FinishFrame();
 
+		// remove the previous frame
 		if (isVidBuff && vid_frames.size() > 1) vid_frames.pop();
 	}
 
-	cv::waitKey(0);
-
 	vid1.release();
+	cv::waitKey(0);
 
 return 0;
 }

@@ -18,6 +18,9 @@ public:
 		_h = h;
 		_f = f;
 		_principal_pt = std::make_pair(w/2,h/2.);
+
+		// Init Transform state
+		_TMat = Eigen::Matrix<T, 4, 4>::Identity();
 		
 		// Insert the data into matrix form
 		initMatrix();
@@ -48,6 +51,17 @@ public:
 	{
 		return _principal_pt;
 	}
+
+	void setTransformMat(Eigen::Matrix<T,4,4> TMat)
+	{
+		_TMat = TMat;
+	}
+
+	const Eigen::Matrix<T,4,4>& getTransformMatEig() const
+	{
+		return _TMat;
+	}
+
 private:
 	void initMatrix()
 	{
@@ -71,5 +85,10 @@ private:
 	cv::Mat_<T> _Kinv;
 	Eigen::Matrix<T, 3, 3> _Eig_K;
 	Eigen::Matrix<T, 3, 3> _Eig_Kinv;
+
+	// Transform matrix
+	
+	Eigen::Matrix<T, 4,4> _TMat;
+	
 };
 

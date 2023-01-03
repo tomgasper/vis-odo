@@ -28,9 +28,9 @@ void visualize(pangolin::Renderable& scene, const Eigen::Matrix<T, 3, 3>& Kinv, 
 {
 
 		// Add new camera to the scene
-		auto camera = std::make_shared<pangolin::Camera<double>>(Kinv, 960. ,540.  , 0.2f, 1);
-		camera->T_pc = pangolin::OpenGlMatrix(T_mat);
-		scene.Add(camera);
+		auto camera_vis = std::make_shared<pangolin::Camera<double>>(Kinv, 960. ,540.  , 0.2f, 1);
+		camera_vis->T_pc = pangolin::OpenGlMatrix(T_mat);
+		scene.Add(camera_vis);
 
 		// temp point generation for visualization
 		std::vector<Eigen::Matrix<double, 3, 1>> pts;
@@ -51,7 +51,7 @@ void visualize(pangolin::Renderable& scene, const Eigen::Matrix<T, 3, 3>& Kinv, 
 }
 
 template<typename L>
-void doFrame(pangolin::Renderable& scene,const CameraParams<L>& camera,  std::queue<cv::Mat>& vid_frames, struct myState& state)
+void doFrame(pangolin::Renderable& scene, CameraParams<L>& camera,  std::queue<cv::Mat>& vid_frames)
 {
 		// Not enough frames for feature tracking, 2 are needed
 		if (vid_frames.size() < 2) return;
@@ -68,68 +68,38 @@ void doFrame(pangolin::Renderable& scene,const CameraParams<L>& camera,  std::qu
 
 		// Init matrices for the poseEstimation output
 		cv::Mat R, t;
-
-		
-		
-		// Feed new frame to the pose estimation
-		poseEstimation(img1,img2, R, t);
-
-		// std::cout << "R: " << R << std::endl;
-		std::cout << "t: " << t << std::endl;
-
-		// state.w_t = state.w_t + 0.1 * (state.w_R * t);
-		// state.w_R = R.() * state.w_R;
-
-		// R = state.w_R;
-		// t = state.w_t;
-		//
-		//
 	
+		// Feed new frame to the pose estimation fnc
+		poseEstimation(img1,img2, R, t, camera);
 
-		/*
-		Eigen::Matrix4d T_mat;
-		T_mat << R.at<double>(0,0),R.at<double>(0,1),R.at<double>(0,2), t.at<double>(0,0),
-			 R.at<double>(1,0),R.at<double>(1,1),R.at<double>(1,2), t.at<double>(1,0),
-			 R.at<double>(2,0),R.at<double>(2,1),R.at<double>(2,2), t.at<double>(2,0),
-			 0,0,0,1;
-		*/
-
-
-		Eigen::Matrix4d T_mat;
-		T_mat << R.at<double>(0,0),R.at<double>(0,1),R.at<double>(0,2), 0.1*t.at<double>(0,0),
-			 R.at<double>(1,0),R.at<double>(1,1),R.at<double>(1,2), 0.1*t.at<double>(1,0),
-			 R.at<double>(2,0),R.at<double>(2,1),R.at<double>(2,2), 0.1*t.at<double>(2,0),
-			 0,0,0,1;
-
-		Eigen::Matrix4d flip_Y;
-		flip_Y << 1, 0, 0, 0,
-		          0, -1, 0, 0,
-		          0, 0, -1, 0,
-		          0, 0, 0, 1;
-
-
+		// t_w = t_w + 0.1 * (R_w * t);
+		// R_w = R * R_w;
 		
-		// cv::Mat t_norm = t / cv::norm(t);
-		// cv::Mat t_to_cam = -(R.t() * t_norm);
-		//
+		// Scale each translate step
+		double t_scale = 0.1;
 
-		/*
-		T_mat << 1, 0, 0, t.at<double>(0,0),
-		      	0, 1, 0 , t.at<double>(1,0),
-			0, 0, 1, t.at<double>(2,0),
-			0, 0, 0, 1;
+		Eigen::Matrix4d T_mat;
+		T_mat << R.at<double>(0,0),R.at<double>(0,1),R.at<double>(0,2), t_scale*t.at<double>(0,0),
+			 R.at<double>(1,0),R.at<double>(1,1),R.at<double>(1,2), t_scale*t.at<double>(1,0),
+			 R.at<double>(2,0),R.at<double>(2,1),R.at<double>(2,2), t_scale*t.at<double>(2,0),
+			 0,0,0,1;
+		
+		// FLIP axis to convert from OpenCV coord system to OpenGl coord system
+		Eigen::Matrix4d flip_coords;
+		flip_coords <<  1, 0, 0, 0,
+		          	0, -1, 0, 0,
+		          	0, 0, -1, 0,
+		          	0, 0, 0, 1;
 
-		*/
+		// Apply R, t transform from current camera pos to new camera pos
+		camera.setTransformMat(camera.getTransformMatEig() * T_mat);
+		// Convert to OpenGl coords
+		Eigen::Matrix4d cam_T_OpenGl = flip_coords * camera.getTransformMatEig();	
 
-		// new transform
-		state.prevT = (state.prevT * T_mat);
-
-		Eigen::Matrix4d flipMat = state.prevT.transpose() * flip_Y;
-		Eigen::Matrix4d fin = flipMat.transpose();
-
-		visualize(scene, camera.getInvMatEig(), fin);
+		visualize(scene, camera.getInvMatEig(), cam_T_OpenGl);
 
 		}
 
-template void doFrame(pangolin::Renderable& scene, const CameraParams<double>& camera,  std::queue<cv::Mat>& vid_frames, struct myState& state);
+// Explicit template instatiation
+template void doFrame(pangolin::Renderable& scene, CameraParams<double>& camera,  std::queue<cv::Mat>& vid_frames);
 
