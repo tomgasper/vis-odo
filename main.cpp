@@ -23,7 +23,7 @@ int main( int /*argc*/, char** /*argv*/ )
 	// Define Projection and initial ModelView matrix
 	pangolin::OpenGlRenderState s_cam(
 	pangolin::ProjectionMatrix(1600,800,680,680,800,600,0.2,100),
-	pangolin::ModelViewLookAt(-2,2,-2, 0,0,0, pangolin::AxisY)
+	pangolin::ModelViewLookAt(0,3,5, 0,0,0, pangolin::AxisY)
 	);
 
 	// Object to hold all scene objects
@@ -43,7 +43,7 @@ int main( int /*argc*/, char** /*argv*/ )
 	pangolin::Timer time;
 
 	// Open up video stream
-	cv::VideoCapture vid1("./data/vid/vid6.mp4");
+	cv::VideoCapture vid1("./data/vid/vid7.mp4");
 
 	// Safety check
 	if (!vid1.isOpened())
@@ -62,7 +62,7 @@ int main( int /*argc*/, char** /*argv*/ )
 	std::queue<cv::Mat> vid_frames;
 
 	bool isVidBuff = true;
-	int _SKIP = 1;
+	int _SKIP =5;
 
 	// Main program loop
 	while( !pangolin::ShouldQuit() )
@@ -75,7 +75,6 @@ int main( int /*argc*/, char** /*argv*/ )
 		if (isVidBuff)
 		{
 			cv::Mat video_frame;
-			bool success = true;
 			int extra_skip = 0;
 
 			// Capture frame
@@ -101,7 +100,7 @@ int main( int /*argc*/, char** /*argv*/ )
 		}
 
 		// All the action happens inside
-		doFrame(scene, camera, vid_frames);
+		doFrame(scene, camera, vid_frames);	
 
 		// Swap frames and Process Events
 		pangolin::FinishFrame();

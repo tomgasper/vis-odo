@@ -24,7 +24,7 @@
 #include "./state.h"
 
 template<typename T>
-void visualize(pangolin::Renderable& scene, const Eigen::Matrix<T, 3, 3>& Kinv, const Eigen::Matrix<T,4,4>& T_mat)
+void visualize(pangolin::Renderable& scene, const std::vector<Eigen::Matrix<T,3,1>> &pts, const Eigen::Matrix<T, 3, 3>& Kinv, const Eigen::Matrix<T,4,4>& T_mat)
 {
 
 		// Add new camera to the scene
@@ -33,6 +33,7 @@ void visualize(pangolin::Renderable& scene, const Eigen::Matrix<T, 3, 3>& Kinv, 
 		scene.Add(camera_vis);
 
 		// temp point generation for visualization
+		/*
 		std::vector<Eigen::Matrix<double, 3, 1>> pts;
 		std::random_device rand;
 		std::mt19937 gen(rand());
@@ -43,9 +44,10 @@ void visualize(pangolin::Renderable& scene, const Eigen::Matrix<T, 3, 3>& Kinv, 
 			Eigen::Matrix<double,3,1> pt = {distr(gen)/100., distr(gen)/100.,distr(gen)/100.};
 			pts.push_back(pt);
 		}
+		*/
 
 		// Add points to the scene
-		auto points = std::make_shared<pangolin::Points<double>>(pts);
+		auto points = std::make_shared<pangolin::Points<double>>(pts,1);
 		points->T_pc = pangolin::OpenGlMatrix(T_mat);
 		scene.Add(points);
 }
@@ -66,11 +68,16 @@ void doFrame(pangolin::Renderable& scene, CameraParams<L>& camera,  std::queue<c
 		cv::cvtColor(img1,img1, cv::COLOR_BGR2GRAY);
 		cv::cvtColor(img2, img2, cv::COLOR_BGR2GRAY);
 
+		// Find and match keypoints using ORB detection
+		std::vector<cv::Point2f> match_pts_1, match_pts_2;
+
+		findKeypoints(img1, img2, match_pts_1, match_pts_2);
+
 		// Init matrices for the poseEstimation output
 		cv::Mat R, t;
 	
 		// Feed new frame to the pose estimation fnc
-		poseEstimation(img1,img2, R, t, camera);
+		poseEstimation(match_pts_1, match_pts_2, R, t, camera);
 
 		// t_w = t_w + 0.1 * (R_w * t);
 		// R_w = R * R_w;
@@ -94,9 +101,16 @@ void doFrame(pangolin::Renderable& scene, CameraParams<L>& camera,  std::queue<c
 		// Apply R, t transform from current camera pos to new camera pos
 		camera.setTransformMat(camera.getTransformMatEig() * T_mat);
 		// Convert to OpenGl coords
-		Eigen::Matrix4d cam_T_OpenGl = flip_coords * camera.getTransformMatEig();	
+		Eigen::Matrix4d cam_T_OpenGl = flip_coords * camera.getTransformMatEig();
 
-		visualize(scene, camera.getInvMatEig(), cam_T_OpenGl);
+		// Triangulate based on found poses
+		std::vector<Eigen::Matrix<double,3,1>> pts_3d;
+
+		triangulate(match_pts_1, match_pts_2, R, t, camera, pts_3d);
+
+		visualize(scene, pts_3d, camera.getInvMatEig(), cam_T_OpenGl);
+
+		// cv::waitKey(0);
 
 		}
 

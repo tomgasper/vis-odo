@@ -14,8 +14,97 @@
 
 using namespace cv;
 
-template<typename L>
-void poseEstimation( Mat& img_1, Mat& img_2, Mat& R, Mat& t, CameraParams<L>& camera)
+
+
+void triangulate( const std::vector<Point2f> &match_pts_1, const std::vector<Point2f> &match_pts_2,  const cv::Mat &R_in, const cv::Mat &t, CameraParams<double> &camera, std::vector<Eigen::Matrix<double,3,1>> &out_pts)
+{
+	Mat T_1 = (Mat_<float>(3,4) <<
+			1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, 1, 0);
+
+	 cv::Mat R = R_in;
+	
+	Mat T_2 = (Mat_<float>(3,4) <<
+			R.at<double>(0, 0), R.at<double>(0, 1), R.at<double>(0, 2), t.at<double>(0, 0),
+			R.at<double>(1, 0), R.at<double>(1, 1), R.at<double>(1, 2), t.at<double>(1, 0),
+			R.at<double>(2, 0), R.at<double>(2, 1), R.at<double>(2, 2), t.at<double>(2, 0)
+		  );
+
+
+	// Eigen::Matrix4d m = camera.getTransformMatEig();
+
+	/*
+	Mat T_2 = (Mat_<float>(3,4) << m(0,0), m(0,1), m(0,2), m(0,3),
+					m(1,0), m(1,1), m(1,2), m(1,3),
+					m(2,0), m(2,1), m(2,2), m(2,3));
+
+	*/
+	std::vector<cv::Point2f> pts_1, pts_2;
+
+	cv::Mat K = camera.getMat();
+	
+	/*
+	for (cv::Dmatch m : matches)
+	{
+		cv::Point2f pt1 = kpts_1[m.queryIdx].pt;
+		cv::Point2f pt2 = kpts_2[m.trainIdx].pt;
+		
+		cv::undistortPoints(pt1, pt1, K);
+		cv::undistortPoints(pt2, pt2, K);
+
+		pts_1.push_back(pt1);
+		pts_2.push_back(pt2);
+	}
+	*/
+	
+	
+	// Normalize points first
+	for (int i=0; i < match_pts_1.size(); i++)
+	{
+		std::vector<float> dist_coeffs;
+
+		
+
+		std::vector<cv::Point2f> pts{match_pts_1[i], match_pts_2[i]};
+
+		// cv::Point2f pt1 = match_pts_1[i];
+		// cv::Point2f pt2 = match_pts_2[i]; 
+		
+		 cv::undistortPoints(pts, pts, K, dist_coeffs);
+		// cv::undistortPoints(pt2, pt2, K, dist_coeffs);
+		//
+		//
+		pts_1.push_back(pts[0]);
+		pts_2.push_back(pts[1]);
+	}
+
+
+
+	cv::Mat pts_4d_homo;
+	cv::triangulatePoints(T_1, T_2, pts_1, pts_2, pts_4d_homo);
+
+	for (int i = 0; i < pts_4d_homo.cols; i++)
+	{
+		cv::Mat x = pts_4d_homo.col(i);
+
+		// from homo system to unhomo
+		x = x / x.at<float>(3,0);
+
+		Eigen::Matrix<double, 3, 1> pt;
+	        pt << double(x.at<float>(0,0)), double(x.at<float>(1,0)), double(x.at<float>(2,0));
+
+		pt = pt * 0.1;
+
+		if ( pt(2,0) <= 0.0 ) continue;
+
+		std::cout << pt(2,0) << std::endl;
+		out_pts.push_back(pt);
+	}
+
+}
+
+void findKeypoints(Mat& img_1, Mat& img_2, std::vector<cv::Point2f> &match_pts_1, std::vector<cv::Point2f> &match_pts_2)
 {
 	// Set up ORB detector
 	std::vector<KeyPoint> kpts_1, kpts_2;
@@ -58,28 +147,25 @@ void poseEstimation( Mat& img_1, Mat& img_2, Mat& R, Mat& t, CameraParams<L>& ca
 	// Filter matches by distance
 	for (auto const& match : all_matches)
 	{
-		if (match[0].distance < 0.5*match[1].distance){								
+		if (match[0].distance < 0.50*match[1].distance){								
 		 good_matches.push_back(match[0]);
 		}
 	}
 
-	Mat matches_img = img_2;
+	// Mat matches_img = img_2;
 
 	// Point2d principal_point (w/2.,h/2.);
 
-	Mat K = camera.getMat();
-	Mat Kinv = camera.getInvMat();
+	// Mat K = camera.getMat();
+	// Mat Kinv = camera.getInvMat();
 
-	// Calculate the Essential Matrix
-	Mat E;
-	std::vector<Point2f> match_pts_1,match_pts_2;
+	// std::vector<Point2f> match_pts_1,match_pts_2;
 
 	for (int i = 0; i < good_matches.size(); ++i)
 	{
 		int idx_1 = good_matches[i].queryIdx;
 		int idx_2 = good_matches[i].trainIdx;
 	
-
 		match_pts_1.push_back(kpts_1[idx_1].pt);
 		match_pts_2.push_back(kpts_2[idx_2].pt);
 
@@ -91,6 +177,19 @@ void poseEstimation( Mat& img_1, Mat& img_2, Mat& R, Mat& t, CameraParams<L>& ca
 		cv::line(img_1, kpts_1[idx_1].pt, kpts_2[idx_2].pt, cv::Scalar(0,255,0), 2, 4, 0);
 	}
 
+	imshow("matches", img_1);
+}
+
+
+template<typename L>
+void poseEstimation( const std::vector<Point2f> &match_pts_1, const std::vector<Point2f> &match_pts_2, Mat& R, Mat& t, CameraParams<L>& camera)
+{
+	// Retrive Intrinsic Matrix
+	Mat K = camera.getMat();
+	Mat Kinv = camera.getInvMat();
+
+	// Calculate the Essential Matrix
+	Mat E;
 	E = findEssentialMat(match_pts_1, match_pts_2, K, cv::RANSAC, 0.9999, 3.0, 200);	
 
 	// Decompose Essential matrix
@@ -100,8 +199,10 @@ void poseEstimation( Mat& img_1, Mat& img_2, Mat& R, Mat& t, CameraParams<L>& ca
 	// Recover rotation and translation from Essential Matrix
 	recoverPose(E, match_pts_1, match_pts_2, K, R,t);
 
+	
 
 	// Check accuracy
+	/*
 	Mat t_left_cross = ( Mat_<double>(3,3) << 0, -t.at<double>(2,0), t.at<double>(1,0),
 				t.at<double>(2,0), 0 , -t.at<double>(0,0),
 				-t.at<double>(1,0), t.at<double>(0,0), 0);
@@ -112,9 +213,6 @@ void poseEstimation( Mat& img_1, Mat& img_2, Mat& R, Mat& t, CameraParams<L>& ca
 	// check epipolar constraints
 	for ( auto const& m : good_matches )
 	{
-
-
-
 		Mat pt1 = (Mat_<double>(3,1) << kpts_1[m.queryIdx].pt.x, kpts_1[m.queryIdx].pt.y, 1.);
 		Mat pt2 = (Mat_<double>(3,1) << kpts_2[m.trainIdx].pt.x, kpts_2[m.trainIdx].pt.y, 1.);
 
@@ -126,14 +224,12 @@ void poseEstimation( Mat& img_1, Mat& img_2, Mat& R, Mat& t, CameraParams<L>& ca
 
 		Mat dist = pt2.t() * t_left_cross * R * pt1;
 
-		//std::cout << "Epipolar constraint = " << dist << std::endl;
+		// std::cout << "Epipolar constraint = " << dist << std::endl;
 	}
-
-	imshow("matches", img_1);
-	// waitKey(0);
+	*/	
 
 }
 
-template void poseEstimation( Mat& img_1, Mat& img_2, Mat& R, Mat& t, CameraParams<double>& camera);
+template void poseEstimation(  const std::vector<Point2f> &match_pts_1, const std::vector<Point2f> &match_pts_2,  Mat& R, Mat& t, CameraParams<double>& camera);
 
 
