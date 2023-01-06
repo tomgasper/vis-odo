@@ -12,7 +12,6 @@
 
 #include "./frame.h"
 #include "./camera_params.hpp"
-#include "./state.h"
 
 
 int main( int /*argc*/, char** /*argv*/ )
@@ -40,10 +39,8 @@ int main( int /*argc*/, char** /*argv*/ )
 	scene.Render();
 	});
 	
-	pangolin::Timer time;
-
 	// Open up video stream
-	cv::VideoCapture vid1("./data/vid/vid7.mp4");
+	cv::VideoCapture vid1("./data/vid/cem_3.mp4");
 
 	// Safety check
 	if (!vid1.isOpened())
@@ -60,17 +57,16 @@ int main( int /*argc*/, char** /*argv*/ )
 
 	// Store 2 most recent frames for feature matching
 	std::queue<cv::Mat> vid_frames;
-
 	bool isVidBuff = true;
-	int _SKIP =5;
+
+	// Skip frames every buffer read, _SKIP = 0 means no frame skipping
+	int _SKIP =6;
 
 	// Main program loop
 	while( !pangolin::ShouldQuit() )
 	{
 		// Clear screen and activate view to render into
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		double t = time.Elapsed_ms();
-
 
 		if (isVidBuff)
 		{

@@ -3,7 +3,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "./camera_params.hpp"
-#include "./state.h"
+
 
 template<typename T>
 void visualize(pangolin::Renderable&, const std::vector<Eigen::Matrix<T,3,1>> &pts, const Eigen::Matrix<T,3,3>& , const Eigen::Matrix<T,4,4>& );

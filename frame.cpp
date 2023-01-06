@@ -21,8 +21,6 @@
 #include "./frame.h"
 #include "./camera_params.hpp"
 
-#include "./state.h"
-
 template<typename T>
 void visualize(pangolin::Renderable& scene, const std::vector<Eigen::Matrix<T,3,1>> &pts, const Eigen::Matrix<T, 3, 3>& Kinv, const Eigen::Matrix<T,4,4>& T_mat)
 {
@@ -31,20 +29,6 @@ void visualize(pangolin::Renderable& scene, const std::vector<Eigen::Matrix<T,3,
 		auto camera_vis = std::make_shared<pangolin::Camera<double>>(Kinv, 960. ,540.  , 0.2f, 1);
 		camera_vis->T_pc = pangolin::OpenGlMatrix(T_mat);
 		scene.Add(camera_vis);
-
-		// temp point generation for visualization
-		/*
-		std::vector<Eigen::Matrix<double, 3, 1>> pts;
-		std::random_device rand;
-		std::mt19937 gen(rand());
-		std::uniform_int_distribution<> distr(-100,100);
-		for (int i = -10; i < 10; i++)
-		{
-
-			Eigen::Matrix<double,3,1> pt = {distr(gen)/100., distr(gen)/100.,distr(gen)/100.};
-			pts.push_back(pt);
-		}
-		*/
 
 		// Add points to the scene
 		auto points = std::make_shared<pangolin::Points<double>>(pts,1);
@@ -82,7 +66,7 @@ void doFrame(pangolin::Renderable& scene, CameraParams<L>& camera,  std::queue<c
 		// t_w = t_w + 0.1 * (R_w * t);
 		// R_w = R * R_w;
 		
-		// Scale each translate step
+		// Scale each translation step
 		double t_scale = 0.1;
 
 		Eigen::Matrix4d T_mat;
