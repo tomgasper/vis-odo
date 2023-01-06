@@ -16,13 +16,13 @@
 
 int main( int /*argc*/, char** /*argv*/ )
 {
-	pangolin::CreateWindowAndBind("Main",1600,1200);
+	pangolin::CreateWindowAndBind("Main",1600,1000);
 	glEnable(GL_DEPTH_TEST);
 
 	// Define Projection and initial ModelView matrix
 	pangolin::OpenGlRenderState s_cam(
-	pangolin::ProjectionMatrix(1600,800,680,680,800,600,0.2,100),
-	pangolin::ModelViewLookAt(0,3,5, 0,0,0, pangolin::AxisY)
+	pangolin::ProjectionMatrix(1600,1000,680,680,800,500,0.2,100),
+	pangolin::ModelViewLookAt(0,4,2, 0,0,0, pangolin::AxisY)
 	);
 
 	// Object to hold all scene objects
@@ -31,7 +31,7 @@ int main( int /*argc*/, char** /*argv*/ )
 	// Create Interactive View in window
 	pangolin::SceneHandler handler(scene,s_cam);
 	pangolin::View& d_cam = pangolin::CreateDisplay()
-	    .SetBounds(0.0, 1.0, 0.0, 1.0, -1600.0f/800.0f)
+	    .SetBounds(0.0, 1.0, 0.0, 1.0, -1600.0f/1000.0f)
 	    .SetHandler(&handler);
 
 	d_cam.SetDrawFunction([&](pangolin::View& view){
@@ -40,7 +40,7 @@ int main( int /*argc*/, char** /*argv*/ )
 	});
 	
 	// Open up video stream
-	cv::VideoCapture vid1("./data/vid/cem_3.mp4");
+	cv::VideoCapture vid1("./data/vid/cem_2_trim_2.mp4");
 
 	// Safety check
 	if (!vid1.isOpened())
@@ -60,7 +60,7 @@ int main( int /*argc*/, char** /*argv*/ )
 	bool isVidBuff = true;
 
 	// Skip frames every buffer read, _SKIP = 0 means no frame skipping
-	int _SKIP =6;
+	int _SKIP =5;
 
 	// Main program loop
 	while( !pangolin::ShouldQuit() )

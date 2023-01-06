@@ -197,6 +197,7 @@ void triangulate( const std::vector<Point2f> &match_pts_1, const std::vector<Poi
 
 }
 
+// Explicit template instantiation
 template void poseEstimation(  const std::vector<Point2f> &match_pts_1, const std::vector<Point2f> &match_pts_2,  Mat& R, Mat& t, CameraParams<double>& camera);
 template void checkAccuracy(const cv::Mat& R,const cv::Mat& t, const Mat &E, const std::vector<cv::Point2f> &kpts_1, const std::vector<cv::Point2f> &kpts_2, const CameraParams<double>& camera );
 

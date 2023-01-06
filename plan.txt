@@ -1,5 +1,0 @@
-1. Download and run Pangolin VV
-2. Make the structure nice for this C++ project but don't overwork it VV
-3. Start implementing visual odometry via ORB detector from opencv XV
-4. Make a nice visual test enivornement to test things out XV
-5. Implement Triangulation 

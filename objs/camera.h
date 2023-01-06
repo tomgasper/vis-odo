@@ -26,6 +26,7 @@ namespace pangolin {
 		}
 
 		void Render(const RenderParams&) override {
+			glColor3f(0.0,255.0,255.0);
 			glPointSize(_pointSize);
 			glDrawFrustum(_Kinv,_w,_h,_scale);
 			glPointSize(1);

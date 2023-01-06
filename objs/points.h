@@ -21,7 +21,7 @@ namespace pangolin {
 		}
 
 		void Render(const RenderParams&) override {
-			glPointSize(_pointSize);
+			glPointSize(_pointSize);	
 			glDrawPoints(_listOfPoints);
 			glPointSize(1);
 		}
