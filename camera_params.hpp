@@ -10,14 +10,15 @@ template<typename T>
 class CameraParams
 {
 public:
-	CameraParams(T w, T h, T f)
+	CameraParams(T s, T w, T h, T f)
 	{
 		if (w <= 0 || h <= 0 || f <= 0) throw std::invalid_argument("Invalid camera parameters");
 
-		_w = w;
-		_h = h;
+		_w = w/s;
+		_h = h/s;
 		_f = f;
 		_principal_pt = std::make_pair(w/2,h/2.);
+		_scale = s;
 
 		// Init Transform state
 		_TMat = Eigen::Matrix<T, 4, 4>::Identity();
@@ -25,6 +26,21 @@ public:
 		// Insert the data into matrix form
 		initMatrix();
 		initInvMatrix(_K);
+	}
+
+	T getScale() const
+	{
+		return _scale;
+	}
+
+	T getWidth() const
+	{
+		return _w;
+	}
+
+	T getHeight() const
+	{
+		return _h;
 	}
 
 	const cv::Mat_<T>& getMat() const
@@ -75,6 +91,7 @@ private:
 		cv::cv2eigen(_Kinv, _Eig_Kinv);
 	}
 
+	T _scale;
 	T _w;
 	T _h;
 	T _f;

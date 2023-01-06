@@ -14,8 +14,27 @@
 #include "./camera_params.hpp"
 
 
-int main( int /*argc*/, char** /*argv*/ )
+int main( int argc, char *argv[]  )
 {
+	// Read command line arguments
+	double INPUT_f;
+	int INPUT_skip = 5;
+	std::string INPUT_vid_location;
+	
+	if (argc == 4)
+	{
+		std::istringstream iss(argv[1]);
+		iss >> INPUT_f;
+
+		std::istringstream iss2(argv[2]);
+		iss2 >> INPUT_skip;
+
+		std::istringstream iss3(argv[3]);
+		iss3 >> INPUT_vid_location;
+
+	} else std::invalid_argument("Invalid number of command line arguments");
+
+
 	pangolin::CreateWindowAndBind("Main",1600,1000);
 	glEnable(GL_DEPTH_TEST);
 
@@ -40,7 +59,7 @@ int main( int /*argc*/, char** /*argv*/ )
 	});
 	
 	// Open up video stream
-	cv::VideoCapture vid1("./data/vid/cem_2_trim_2.mp4");
+	cv::VideoCapture vid1(INPUT_vid_location);
 
 	// Safety check
 	if (!vid1.isOpened())
@@ -50,17 +69,18 @@ int main( int /*argc*/, char** /*argv*/ )
 	}
 
 	// Init camera/sensor config
-	double w = 960;
-	double h = 540;
-	double f = (4.7/6.8)*w;
-	CameraParams<double> camera(w,h,f);	
+	// Grab one frame to check input image dims
+	cv::Mat initImg;
+	vid1 >> initImg;
+	double img_scale = 1;
+	if (initImg.cols > 960) img_scale = initImg.cols/960;
+	CameraParams<double> camera(
+			img_scale, initImg.cols, initImg.rows, INPUT_f
+			);
 
 	// Store 2 most recent frames for feature matching
 	std::queue<cv::Mat> vid_frames;
 	bool isVidBuff = true;
-
-	// Skip frames every buffer read, _SKIP = 0 means no frame skipping
-	int _SKIP =5;
 
 	// Main program loop
 	while( !pangolin::ShouldQuit() )
@@ -76,8 +96,8 @@ int main( int /*argc*/, char** /*argv*/ )
 			// Capture frame
 			vid1 >> video_frame;
 
-			// If _SKIP > 0 skips extra frames 
-			while( !video_frame.empty() && extra_skip < _SKIP)
+			// If SKIP > 0 skips extra frames 
+			while( !video_frame.empty() && extra_skip < INPUT_skip)
 			{
 				vid1 >> video_frame;
 				extra_skip++;

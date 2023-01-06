@@ -6,7 +6,7 @@
 
 
 template<typename T>
-void visualize(pangolin::Renderable&, const std::vector<Eigen::Matrix<T,3,1>> &pts, const Eigen::Matrix<T,3,3>& , const Eigen::Matrix<T,4,4>& );
+void visualize(pangolin::Renderable&, const std::vector<Eigen::Matrix<T,3,1>> &pts, const CameraParams<T>& , const Eigen::Matrix<T,4,4>& );
 
 template <typename L>
 void doFrame(pangolin::Renderable&, CameraParams<L>&, std::queue<cv::Mat>&);

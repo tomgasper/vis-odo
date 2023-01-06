@@ -22,11 +22,13 @@
 #include "./camera_params.hpp"
 
 template<typename T>
-void visualize(pangolin::Renderable& scene, const std::vector<Eigen::Matrix<T,3,1>> &pts, const Eigen::Matrix<T, 3, 3>& Kinv, const Eigen::Matrix<T,4,4>& T_mat)
+void visualize(pangolin::Renderable& scene, const std::vector<Eigen::Matrix<T,3,1>> &pts, const CameraParams<T> &camera, const Eigen::Matrix<T,4,4>& T_mat)
 {
 
+		const Eigen::Matrix<T,3,3>& Kinv = camera.getInvMatEig();
+
 		// Add new camera to the scene
-		auto camera_vis = std::make_shared<pangolin::Camera<double>>(Kinv, 960. ,540.  , 0.2f, 1);
+		auto camera_vis = std::make_shared<pangolin::Camera<double>>(Kinv, camera.getWidth() ,camera.getHeight(), 0.2f, 2);
 		camera_vis->T_pc = pangolin::OpenGlMatrix(T_mat);
 		scene.Add(camera_vis);
 
@@ -46,8 +48,10 @@ void doFrame(pangolin::Renderable& scene, CameraParams<L>& camera,  std::queue<c
 		cv::Mat img1 = vid_frames.back();
 		cv::Mat img2 = vid_frames.front();
 
-		cv::resize(img1,img1, cv::Size(), 0.5,0.5);
-		cv::resize(img2, img2, cv::Size(), 0.5,0.5);
+		double scale_img = 1/camera.getScale();
+
+		cv::resize(img1,img1, cv::Size(),scale_img, scale_img);
+		cv::resize(img2, img2, cv::Size(), scale_img, scale_img);
 
 		cv::cvtColor(img1,img1, cv::COLOR_BGR2GRAY);
 		cv::cvtColor(img2, img2, cv::COLOR_BGR2GRAY);
@@ -92,7 +96,7 @@ void doFrame(pangolin::Renderable& scene, CameraParams<L>& camera,  std::queue<c
 
 		triangulate(match_pts_1, match_pts_2, R, t, camera, pts_3d);
 
-		visualize(scene, pts_3d, camera.getInvMatEig(), cam_T_OpenGl);
+		visualize(scene, pts_3d, camera, cam_T_OpenGl);
 
 		// cv::waitKey(0);
 
