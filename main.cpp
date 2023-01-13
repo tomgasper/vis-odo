@@ -21,6 +21,8 @@ int main( int argc, char *argv[]  )
 	int INPUT_skip = 5;
 	std::string INPUT_vid_location;
 	
+	// TO DO:
+	// Handle input correctly
 	if (argc == 4)
 	{
 		std::istringstream iss(argv[1]);

@@ -189,9 +189,8 @@ void triangulate( const std::vector<Point2f> &match_pts_1, const std::vector<Poi
 
 		pt = pt * 0.1;
 
+		// point behind the camera (-z)
 		if ( pt(2,0) <= 0.0 ) continue;
-
-		std::cout << pt(2,0) << std::endl;
 		out_pts.push_back(pt);
 	}
 
