@@ -3,7 +3,7 @@
 Camera pose estimation based on the relative movement found using keypoints between two succeding frames.
 Every new frame new keypoints are found and matched with appropriate keypoints from previous frame. Then, Essential Matrix is estimated(using OpenCV's Nister's 5-point algorithm implementation) and a pose is recovered from that, which is a rotation and translation matrix between camera 1/previous frame and camera 2/current frame.
 
-All computer vision tasks has been implemented via OpenCV library, rendering done via Pangolin.
+All computer vision tasks have been implemented via OpenCV library, rendering done via Pangolin.
 
 Full example video can be found on [youtube](https://www.youtube.com/watch?v=5iN7dfLXRhU)
 
